@@ -108,6 +108,15 @@ class HatefulMemesDataset(Dataset):
         clip_input_ids = clip_inputs['input_ids'].squeeze()            # Shape: (77,)
         clip_attention_mask = clip_inputs['attention_mask'].squeeze()  # Shape: (77,)
         pixel_values = clip_inputs['pixel_values'].squeeze()          # Shape: (3, H, W)
+        
+                # Ensure consistent tensor sizes
+        assert roberta_input_ids.size(0) == self.max_length, f"RoBERTa input_ids size mismatch: expected {self.max_length}, got {roberta_input_ids.size(0)}"
+        assert roberta_attention_mask.size(0) == self.max_length, f"RoBERTa attention_mask size mismatch: expected {self.max_length}, got {roberta_attention_mask.size(0)}"
+        assert clip_input_ids.size(0) == 77, f"CLIP input_ids size mismatch: expected 77, got {clip_input_ids.size(0)}"
+        assert clip_attention_mask.size(0) == 77, f"CLIP attention_mask size mismatch: expected 77, got {clip_attention_mask.size(0)}"
+        assert pixel_values.size(0) == 3, f"CLIP pixel_values channel size mismatch: expected 3, got {pixel_values.size(0)}"
+        assert pixel_values.size(1) == 224 and pixel_values.size(2) == 224, f"CLIP pixel_values spatial size mismatch: expected (224, 224), got ({pixel_values.size(1)}, {pixel_values.size(2)})"
+
 
         if self.is_test:
             return {

@@ -72,9 +72,13 @@ class HatefulMemeClassifier(nn.Module):
         # Encode text and image with CLIP
         text_embeds, image_embeds = self.clip_encoder(clip_input_ids, clip_attention_mask, pixel_values)  # Each: (batch_size, hidden_size)
 
+        print(f"text_embeds shape: {text_embeds.shape}")        # Expected: (batch_size, 512)
+        print(f"image_embeds shape: {image_embeds.shape}")      # Expected: (batch_size, 768)
+
         # Encode text for sarcasm detection
         sarcasm_score = self.roberta_sarcasm_detector(roberta_input_ids, roberta_attention_mask)  # Shape: (batch_size,)
-        sarcasm_score = sarcasm_score.unsqueeze(-1)  # Shape: (batch_size, 1)  # Changed from unsqueeze(1) to unsqueeze(-1)
+        #sarcasm_score = sarcasm_score.unsqueeze(-1)  # Shape: (batch_size, 1)  # Changed from unsqueeze(1) to unsqueeze(-1)
+        print(f"sarcasm_score shape: {sarcasm_score.shape}")    # Expected: (batch_size, 1)
 
         # Project embeddings to common hidden size
         text_proj = self.text_projection(text_embeds)          # (batch_size, hidden_size)
