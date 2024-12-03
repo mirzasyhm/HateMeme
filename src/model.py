@@ -47,16 +47,16 @@ class HatefulMemeClassifier(nn.Module):
             param.requires_grad = False
 
         # Access hidden sizes from CLIPConfig's text and vision configurations
-        text_hidden_size = self.clip_encoder.clip.config.text_config.hidden_size
-        vision_hidden_size = self.clip_encoder.clip.config.vision_config.hidden_size
+        text_hidden_size = self.clip_encoder.clip.config.text_config.hidden_size  # Typically 512
+        vision_hidden_size = self.clip_encoder.clip.config.vision_config.hidden_size  # Typically 768
 
         print(f"Text Hidden Size: {text_hidden_size}")
         print(f"Vision Hidden Size: {vision_hidden_size}")
 
         # Define projection layers to map embeddings to a common hidden size
-        self.text_projection = nn.Linear(text_hidden_size, hidden_size)
-        self.image_projection = nn.Linear(vision_hidden_size, hidden_size)
-        self.sarcasm_projection = nn.Linear(1, hidden_size)
+        self.text_projection = nn.Linear(text_hidden_size, hidden_size)  # Input: 512, Output: hidden_size
+        self.image_projection = nn.Linear(vision_hidden_size, hidden_size)  # Input: 768, Output: hidden_size
+        self.sarcasm_projection = nn.Linear(1, hidden_size)  # Sarcasm scores have shape (batch_size, 1)
 
         # Define fusion layers
         self.fusion = nn.Sequential(
