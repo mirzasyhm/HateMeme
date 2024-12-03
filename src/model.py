@@ -39,7 +39,7 @@ class RoBERTaSarcasmDetector(nn.Module):
         cls_output = outputs.last_hidden_state[:, 0, :]  # Shape: (batch_size, hidden_size)
         dropout_output = self.dropout(cls_output)
         logits = self.classifier(dropout_output)        # Shape: (batch_size, 1)
-        return torch.sigmoid(logits).squeeze()                    # Shape: (batch_size, 1)
+        return torch.sigmoid(logits)                 # Shape: (batch_size, 1)
 
 class HatefulMemeClassifier(nn.Module):
     def __init__(self, clip_encoder, roberta_sarcasm_detector, hidden_size=512):
