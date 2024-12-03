@@ -5,14 +5,20 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
+import warnings
+
+import pandas as pd  # Ensure pandas is imported
 
 from dataset import HatefulMemesDataset, SarcasmDataset
 from transformers import CLIPProcessor, RobertaTokenizer
 
-from model import CLIPEncoder, RoBERTaSarcasmDetector, HatefulMemeClassifier  # To be defined in model.py
+from model import CLIPEncoder, RoBERTaSarcasmDetector, HatefulMemeClassifier  # Ensure these are correctly defined
 
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import precision_score, recall_score, f1_score
+
+# Suppress the specific FutureWarning (Optional)
+warnings.filterwarnings("ignore", category=FutureWarning, message="You are using `torch.load` with `weights_only=False")
 
 def main():
     # Device configuration
@@ -24,9 +30,9 @@ def main():
     roberta_tokenizer = RobertaTokenizer.from_pretrained('roberta-base')
 
     # Paths to datasets
-    hateful_memes_train_jsonl = os.path.join('..', 'datasets', 'train.jsonl')
-    hateful_memes_dev_jsonl = os.path.join('..', 'datasets', 'dev.jsonl')
-    hateful_memes_img_dir = os.path.join('..', 'datasets')
+    hateful_memes_train_jsonl = os.path.join('..', 'datasets', 'train_corrected.jsonl')  # Updated path
+    hateful_memes_dev_jsonl = os.path.join('..', 'datasets', 'dev_corrected.jsonl')      # Updated path
+    hateful_memes_img_dir = os.path.join('..', 'datasets')                       # Updated image directory
 
     memotion_labels_csv = os.path.join('..', 'datasets', 'labels.csv')
     memotion_reference_csv = os.path.join('..', 'datasets', 'reference.csv')  # If needed
@@ -110,12 +116,12 @@ def main():
     for epoch in range(epochs_sarcasm):
         total_loss = 0
         for batch in sarcasm_train_loader:
-            input_ids = batch['input_ids'].to(device)
-            attention_mask = batch['attention_mask'].to(device)
+            roberta_input_ids = batch['roberta_input_ids'].to(device)               # Updated
+            roberta_attention_mask = batch['roberta_attention_mask'].to(device)     # Updated
             labels = batch['label'].to(device)
 
             optimizer_sarcasm.zero_grad()
-            outputs = sarcasm_detector(input_ids, attention_mask)
+            outputs = sarcasm_detector(roberta_input_ids, roberta_attention_mask)
             loss = criterion_sarcasm(outputs, labels)
             loss.backward()
             optimizer_sarcasm.step()
@@ -133,7 +139,7 @@ def main():
     clip_encoder = CLIPEncoder().to(device)
     clip_encoder.eval()  # Assuming CLIP is pretrained and not fine-tuned here
 
-    # Load the trained Sarcasm Detector
+    # Load the trained Sarcasm Detector with weights_only=True
     sarcasm_detector = RoBERTaSarcasmDetector().to(device)
     sarcasm_detector.load_state_dict(torch.load('roberta_sarcasm_detector.pth', weights_only=True))
     sarcasm_detector.eval()
@@ -151,13 +157,21 @@ def main():
         classifier.train()
         total_loss = 0
         for batch in hateful_meme_train_loader:
-            input_ids = batch['input_ids'].to(device)
-            attention_mask = batch['attention_mask'].to(device)
+            roberta_input_ids = batch['roberta_input_ids'].to(device)                 # Updated
+            roberta_attention_mask = batch['roberta_attention_mask'].to(device)       # Updated
+            clip_input_ids = batch['clip_input_ids'].to(device)                       # Updated
+            clip_attention_mask = batch['clip_attention_mask'].to(device)             # Updated
             pixel_values = batch['pixel_values'].to(device)
             labels = batch['label'].to(device)
 
             optimizer_classifier.zero_grad()
-            outputs = classifier(input_ids, attention_mask, pixel_values)
+            outputs = classifier(
+                roberta_input_ids,
+                roberta_attention_mask,
+                clip_input_ids,
+                clip_attention_mask,
+                pixel_values
+            )
             loss = criterion_classifier(outputs, labels)
             loss.backward()
             optimizer_classifier.step()
@@ -175,12 +189,20 @@ def main():
         all_labels = []
         with torch.no_grad():
             for batch in hateful_meme_dev_loader:
-                input_ids = batch['input_ids'].to(device)
-                attention_mask = batch['attention_mask'].to(device)
+                roberta_input_ids = batch['roberta_input_ids'].to(device)                 # Updated
+                roberta_attention_mask = batch['roberta_attention_mask'].to(device)       # Updated
+                clip_input_ids = batch['clip_input_ids'].to(device)                       # Updated
+                clip_attention_mask = batch['clip_attention_mask'].to(device)             # Updated
                 pixel_values = batch['pixel_values'].to(device)
                 labels = batch['label'].to(device)
 
-                outputs = classifier(input_ids, attention_mask, pixel_values)
+                outputs = classifier(
+                    roberta_input_ids,
+                    roberta_attention_mask,
+                    clip_input_ids,
+                    clip_attention_mask,
+                    pixel_values
+                )
                 preds = (outputs >= 0.5).float()
                 correct += (preds == labels).sum().item()
                 total += labels.size(0)
@@ -196,10 +218,9 @@ def main():
 
     # Save the trained classifier
     torch.save(classifier.state_dict(), 'hateful_meme_classifier.pth')
-    torch.save(classifier.state_dict(), '/content/drive/My Drive/models/hateful_meme_classifier.pth')
-    torch.save(sarcasm_detector.state_dict(), '/content/drive/My Drive/models/roberta_sarcasm_detector.pth')
+    torch.save(classifier.state_dict(), '/content/drive/My Drive/models/hateful_meme_classifier.pth')  # Ensure this path exists
+    torch.save(sarcasm_detector.state_dict(), '/content/drive/My Drive/models/roberta_sarcasm_detector.pth')  # Ensure this path exists
     print("Hateful Meme Classifier trained and saved.")
 
 if __name__ == "__main__":
-    import pandas as pd  # Import here to avoid issues if running dataset.py directly
     main()

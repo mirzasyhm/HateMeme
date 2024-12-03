@@ -46,20 +46,19 @@ class HatefulMemeClassifier(nn.Module):
         for param in self.roberta_sarcasm_detector.parameters():
             param.requires_grad = False
 
-        # Access hidden sizes from CLIPConfig
+        # Access hidden sizes from CLIPConfig's text and vision configurations
         text_hidden_size = self.clip_encoder.clip.config.text_config.hidden_size
         vision_hidden_size = self.clip_encoder.clip.config.vision_config.hidden_size
+        
+        print(f"Text Hidden Size: {text_hidden_size}")
+        print(f"Vision Hidden Size: {vision_hidden_size}")
 
-        # Define fusion layers
-        # CLIP's text and image embeddings + sarcasm score
-        # Assuming you want to concatenate all three: text_embeds, image_embeds, sarcasm_score
-        # Adjust dimensions accordingly
-
-        # Option 1: Project text and image embeddings to a common hidden size
+        # Define projection layers to map embeddings to a common hidden size
         self.text_projection = nn.Linear(text_hidden_size, hidden_size)
         self.image_projection = nn.Linear(vision_hidden_size, hidden_size)
         self.sarcasm_projection = nn.Linear(1, hidden_size)
 
+        # Define fusion layers
         self.fusion = nn.Sequential(
             nn.ReLU(),
             nn.Dropout(0.3),
@@ -69,17 +68,17 @@ class HatefulMemeClassifier(nn.Module):
             nn.Linear(hidden_size, 1)  # Binary classification
         )
 
-    def forward(self, input_ids, attention_mask, pixel_values):
+    def forward(self, roberta_input_ids, roberta_attention_mask, clip_input_ids, clip_attention_mask, pixel_values):
         # Encode text and image with CLIP
-        text_embeds, image_embeds = self.clip_encoder(input_ids, attention_mask, pixel_values)  # Each: (batch_size, hidden_size)
+        text_embeds, image_embeds = self.clip_encoder(clip_input_ids, clip_attention_mask, pixel_values)  # Each: (batch_size, hidden_size)
 
         # Encode text for sarcasm detection
-        sarcasm_score = self.roberta_sarcasm_detector(input_ids, attention_mask)  # Shape: (batch_size,)
+        sarcasm_score = self.roberta_sarcasm_detector(roberta_input_ids, roberta_attention_mask)  # Shape: (batch_size,)
         sarcasm_score = sarcasm_score.unsqueeze(1)  # Shape: (batch_size, 1)
 
         # Project embeddings to common hidden size
-        text_proj = self.text_projection(text_embeds)  # (batch_size, hidden_size)
-        image_proj = self.image_projection(image_embeds)  # (batch_size, hidden_size)
+        text_proj = self.text_projection(text_embeds)          # (batch_size, hidden_size)
+        image_proj = self.image_projection(image_embeds)       # (batch_size, hidden_size)
         sarcasm_proj = self.sarcasm_projection(sarcasm_score)  # (batch_size, hidden_size)
 
         # Concatenate all projected features
