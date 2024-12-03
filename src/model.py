@@ -5,7 +5,7 @@ import torch.nn as nn
 from transformers import CLIPModel, RobertaModel
 
 class CLIPEncoder(nn.Module):
-    def __init__(self, model_name='openai/clip-vit-base-patch32'):
+    def __init__(self, model_name='openai/clip-vit-base-patch16'):
         super(CLIPEncoder, self).__init__()
         self.clip = CLIPModel.from_pretrained(model_name)
         
