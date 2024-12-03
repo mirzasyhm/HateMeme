@@ -1,7 +1,7 @@
 # src/example_usage.py
 
 import os
-from src.dataset import HatefulMemesDataset, SarcasmDataset
+from dataset import HatefulMemesDataset, SarcasmDataset
 from transformers import CLIPProcessor, RobertaTokenizer
 
 def main():

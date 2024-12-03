@@ -6,7 +6,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 
-from src.dataset import HatefulMemesDataset, SarcasmDataset
+from dataset import HatefulMemesDataset, SarcasmDataset
 from transformers import CLIPProcessor, RobertaTokenizer
 
 from src.model import CLIPEncoder, RoBERTaSarcasmDetector, HatefulMemeClassifier  # To be defined in model.py
