@@ -196,6 +196,8 @@ def main():
 
     # Save the trained classifier
     torch.save(classifier.state_dict(), 'hateful_meme_classifier.pth')
+    torch.save(classifier.state_dict(), '/content/drive/My Drive/models/hateful_meme_classifier.pth')
+    torch.save(sarcasm_detector.state_dict(), '/content/drive/My Drive/models/roberta_sarcasm_detector.pth')
     print("Hateful Meme Classifier trained and saved.")
 
 if __name__ == "__main__":
