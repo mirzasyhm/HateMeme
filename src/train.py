@@ -30,8 +30,8 @@ def main():
     roberta_tokenizer = RobertaTokenizer.from_pretrained('roberta-base')
 
     # Paths to datasets
-    hateful_memes_train_jsonl = os.path.join('..', 'datasets', 'train_corrected.jsonl')  # Updated path
-    hateful_memes_dev_jsonl = os.path.join('..', 'datasets', 'dev_corrected.jsonl')      # Updated path
+    hateful_memes_train_jsonl = os.path.join('..', 'datasets', 'train.jsonl')  # Updated path
+    hateful_memes_dev_jsonl = os.path.join('..', 'datasets', 'dev.jsonl')      # Updated path
     hateful_memes_img_dir = os.path.join('..', 'datasets')                       # Updated image directory
 
     memotion_labels_csv = os.path.join('..', 'datasets', 'labels.csv')
