@@ -5,7 +5,6 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
-import warnings
 
 import pandas as pd  # Ensure pandas is imported
 
@@ -17,9 +16,6 @@ from model import CLIPEncoder, RoBERTaSarcasmDetector, HatefulMemeClassifier  # 
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import precision_score, recall_score, f1_score
 
-# Suppress the specific FutureWarning (Optional)
-warnings.filterwarnings("ignore", category=FutureWarning, message="You are using `torch.load` with `weights_only=False")
-
 def main():
     # Device configuration
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -30,9 +26,9 @@ def main():
     roberta_tokenizer = RobertaTokenizer.from_pretrained('roberta-base')
 
     # Paths to datasets
-    hateful_memes_train_jsonl = os.path.join('..', 'datasets', 'train.jsonl')  # Updated path
-    hateful_memes_dev_jsonl = os.path.join('..', 'datasets', 'dev.jsonl')      # Updated path
-    hateful_memes_img_dir = os.path.join('..', 'datasets')                       # Updated image directory
+    hateful_memes_train_jsonl = os.path.join('..', 'datasets', 'train.jsonl')  # Use your correct path
+    hateful_memes_dev_jsonl = os.path.join('..', 'datasets', 'dev.jsonl')      # Use your correct path
+    hateful_memes_img_dir = os.path.join('..', 'datasets')                     # Use your correct path
 
     memotion_labels_csv = os.path.join('..', 'datasets', 'labels.csv')
     memotion_reference_csv = os.path.join('..', 'datasets', 'reference.csv')  # If needed

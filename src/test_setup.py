@@ -1,6 +1,7 @@
 # src/test_setup.py
 
 import torch
+from torch.utils.data import DataLoader
 from dataset import HatefulMemesDataset
 from transformers import CLIPProcessor, RobertaTokenizer
 from model import CLIPEncoder, RoBERTaSarcasmDetector, HatefulMemeClassifier
@@ -12,8 +13,8 @@ def test():
     roberta_tokenizer = RobertaTokenizer.from_pretrained('roberta-base')
 
     dataset = HatefulMemesDataset(
-        jsonl_file='train_corrected.jsonl',
-        img_dir='img',
+        jsonl_file='../datasets/train.jsonl',
+        img_dir='../datasets',
         clip_processor=clip_processor,
         roberta_tokenizer=roberta_tokenizer,
         max_length=128,
