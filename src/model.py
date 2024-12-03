@@ -8,6 +8,12 @@ class CLIPEncoder(nn.Module):
     def __init__(self, model_name='openai/clip-vit-base-patch32'):
         super(CLIPEncoder, self).__init__()
         self.clip = CLIPModel.from_pretrained(model_name)
+        
+        # Print hidden sizes for verification
+        text_hidden_size = self.clip.config.text_config.hidden_size
+        vision_hidden_size = self.clip.config.vision_config.hidden_size
+        print(f"CLIP Text Hidden Size: {text_hidden_size}")
+        print(f"CLIP Vision Hidden Size: {vision_hidden_size}")
     
     def forward(self, input_ids, attention_mask, pixel_values):
         outputs = self.clip(
