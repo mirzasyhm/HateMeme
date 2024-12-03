@@ -121,7 +121,13 @@ class SarcasmDataset(Dataset):
             roberta_tokenizer (RobertaTokenizer): Tokenizer for RoBERTa model.
             max_length (int): Maximum token length for RoBERTa.
         """
+        # Drop rows with NaN in 'text_corrected'
         self.df = dataframe.copy()
+        initial_length = len(self.df)
+        self.df = self.df.dropna(subset=['text_corrected'])
+        final_length = len(self.df)
+        print(f"Dropped {initial_length - final_length} rows due to NaN in 'text_corrected'.")
+
         self.roberta_tokenizer = roberta_tokenizer
         self.max_length = max_length
 
@@ -140,7 +146,7 @@ class SarcasmDataset(Dataset):
                 - label: Tensor indicating if the text is sarcastic (1) or not (0).
         """
         row = self.df.iloc[idx]
-        text = row['text_corrected']  # Using corrected text
+        text = row['text_corrected']
         label = row['sarcasm_binary']
 
         # Prepare inputs for RoBERTa
