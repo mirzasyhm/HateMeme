@@ -1,6 +1,6 @@
-# src/example_usage.py
 
 import os
+import pandas as pd
 from dataset import HatefulMemesDataset, SarcasmDataset
 from transformers import CLIPProcessor, RobertaTokenizer
 
@@ -22,6 +22,16 @@ def main():
 
     # Load Memotion dataset
     memotion_df = pd.read_csv(memotion_labels_csv)
+    
+        # Check for NaN in 'text_corrected'
+    num_nan = memotion_df['text_corrected'].isna().sum()
+    print(f"Number of NaN in 'text_corrected': {num_nan}")
+
+    if num_nan > 0:
+        print("Rows with NaN in 'text_corrected':")
+        print(memotion_df[memotion_df['text_corrected'].isna()])
+    else:
+        print("No NaN values found in 'text_corrected'.")
 
     # Split Memotion dataset into training and validation sets (e.g., 80-20 split)
     from sklearn.model_selection import train_test_split
@@ -79,3 +89,4 @@ def main():
 if __name__ == "__main__":
     import pandas as pd  # Import here to avoid issues if running dataset.py directly
     main()
+
