@@ -52,6 +52,7 @@ class HatefulMemesDataset(Dataset):
         self.roberta_tokenizer = roberta_tokenizer
         self.max_length = max_length
         self.is_test = is_test
+        self.clip_processor.tokenizer.model_max_length = 77
 
     def __len__(self):
         return len(self.data)
@@ -84,7 +85,7 @@ class HatefulMemesDataset(Dataset):
             text=text,
             images=image,
             return_tensors="pt",
-            padding=True,
+            padding='max_length',
             truncation=True,
             max_length=77  # CLIP's max sequence length
         )
@@ -108,6 +109,9 @@ class HatefulMemesDataset(Dataset):
         clip_input_ids = clip_inputs['input_ids'].squeeze()            # Shape: (77,)
         clip_attention_mask = clip_inputs['attention_mask'].squeeze()  # Shape: (77,)
         pixel_values = clip_inputs['pixel_values'].squeeze()          # Shape: (3, H, W)
+        
+         # Debug prints to verify sizes
+        print(f"Sample {idx}: clip_input_ids size: {clip_input_ids.size(0)}")  # Should be 77
         
                 # Ensure consistent tensor sizes
         assert roberta_input_ids.size(0) == self.max_length, f"RoBERTa input_ids size mismatch: expected {self.max_length}, got {roberta_input_ids.size(0)}"
