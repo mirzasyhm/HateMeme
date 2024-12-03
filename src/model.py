@@ -76,13 +76,15 @@ class HatefulMemeClassifier(nn.Module):
         print(f"image_embeds shape: {image_embeds.shape}")      # Expected: (batch_size, 768)
 
         # Encode text for sarcasm detection
-        sarcasm_score = sarcasm_score.unsqueeze(1)  # Shape: (batch_size, 1)
-        sarcasm_proj = self.sarcasm_projection(sarcasm_score)  # Now (batch_size, hidden_size)
+        sarcasm_score = self.roberta_sarcasm_detector(roberta_input_ids, roberta_attention_mask)  # Shape: (batch_size,)
+
+        print(f"sarcasm_score shape: {sarcasm_score.shape}")    # Expected: (batch_size, 1)
 
         # Project embeddings to common hidden size
         text_proj = self.text_projection(text_embeds)          # (batch_size, hidden_size)
         image_proj = self.image_projection(image_embeds)       # (batch_size, hidden_size)
-        
+        sarcasm_score = sarcasm_score.unsqueeze(1)  # Shape: (batch_size, 1)
+        sarcasm_proj = self.sarcasm_projection(sarcasm_score)  # (batch_size, hidden_size)
 
         # Concatenate all projected features
         combined = torch.cat((text_proj, image_proj, sarcasm_proj), dim=1)  # Shape: (batch_size, hidden_size * 3)
