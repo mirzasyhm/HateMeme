@@ -13,7 +13,7 @@ def main():
     hateful_memes_train_jsonl = os.path.join('..', 'datasets', 'train.jsonl')
     hateful_memes_dev_jsonl = os.path.join('..', 'datasets', 'dev.jsonl')
     hateful_memes_test_jsonl = os.path.join('..', 'datasets', 'test.jsonl')
-    hateful_memes_img_dir = os.path.join('..', 'datasets', 'img')
+    hateful_memes_img_dir = os.path.join('..', 'datasets')
 
     memotion_labels_csv = os.path.join('..', 'datasets', 'labels.csv')
     memotion_reference_csv = os.path.join('..', 'datasets', 'reference.csv')  # If needed
