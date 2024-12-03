@@ -8,7 +8,7 @@ from torch.utils.data import DataLoader
 from dataset import HatefulMemesDataset
 from transformers import CLIPProcessor, RobertaTokenizer
 
-from model import CLIPEncoder, RoBERTaSarcasmDetector, HatefulMemeClassifier  # To be defined in model.py
+from model import CLIPEncoder, RoBERTaSarcasmDetector, HatefulMemeClassifier  # Ensure these are correctly defined
 
 from sklearn.metrics import precision_score, recall_score, f1_score, accuracy_score
 
@@ -48,12 +48,12 @@ def main():
     clip_encoder.eval()
 
     sarcasm_detector = RoBERTaSarcasmDetector().to(device)
-    sarcasm_detector.load_state_dict(torch.load('roberta_sarcasm_detector.pth'))
+    sarcasm_detector.load_state_dict(torch.load('roberta_sarcasm_detector.pth', map_location=device))
     sarcasm_detector.eval()
 
     # Initialize the Hateful Meme Classifier
     classifier = HatefulMemeClassifier(clip_encoder, sarcasm_detector).to(device)
-    classifier.load_state_dict(torch.load('hateful_meme_classifier.pth'))
+    classifier.load_state_dict(torch.load('hateful_meme_classifier.pth', map_location=device))
     classifier.eval()
 
     # Evaluation Metrics
@@ -61,28 +61,36 @@ def main():
     total = 0
     all_preds = []
     all_labels = []  # Not available in test set, typically for unseen data
+
     # Assuming test set has labels; if not, adjust accordingly.
-
-    # If test set does not have labels, you can skip accuracy metrics
-    # and focus on generating predictions.
-
-    # For demonstration, let's assume test set has labels (otherwise, remove related parts)
     # If test set lacks labels, you can store predictions with image paths for submission
 
+    # For demonstration, let's assume test set has labels (otherwise, remove related parts)
     # Modify the Dataset class if necessary to include labels or handle missing labels
 
     with torch.no_grad():
         for batch in hateful_meme_test_loader:
-            input_ids = batch['input_ids'].to(device)
-            attention_mask = batch['attention_mask'].to(device)
+            # Extract all required inputs
+            roberta_input_ids = batch['roberta_input_ids'].to(device)
+            roberta_attention_mask = batch['roberta_attention_mask'].to(device)
+            clip_input_ids = batch['clip_input_ids'].to(device)
+            clip_attention_mask = batch['clip_attention_mask'].to(device)
             pixel_values = batch['pixel_values'].to(device)
 
-            outputs = classifier(input_ids, attention_mask, pixel_values)
-            preds = (outputs >= 0.5).float()
+            # Pass all inputs to the classifier
+            outputs = classifier(
+                roberta_input_ids,
+                roberta_attention_mask,
+                clip_input_ids,
+                clip_attention_mask,
+                pixel_values
+            )  # Shape: [batch_size, 1]
+
+            preds = (outputs >= 0.5).float()  # Shape: [batch_size, 1]
 
             # If labels are present
             if 'label' in batch:
-                labels = batch['label'].to(device)
+                labels = batch['label'].to(device).unsqueeze(1)  # Shape: [batch_size, 1]
                 correct += (preds == labels).sum().item()
                 total += labels.size(0)
                 all_preds.extend(preds.cpu().numpy())
