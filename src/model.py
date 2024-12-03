@@ -5,7 +5,7 @@ import torch.nn as nn
 from transformers import CLIPModel, RobertaModel
 
 class CLIPEncoder(nn.Module):
-    def __init__(self, model_name='openai/clip-vit-base-patch16'):
+    def __init__(self, model_name='openai/clip-vit-base-patch32'):
         super(CLIPEncoder, self).__init__()
         self.clip = CLIPModel.from_pretrained(model_name)
         
@@ -26,7 +26,6 @@ class CLIPEncoder(nn.Module):
         image_embeds = outputs.image_embeds  # Shape: (batch_size, vision_hidden_size)
         return text_embeds, image_embeds
 
-
 class RoBERTaSarcasmDetector(nn.Module):
     def __init__(self, pretrained_model='roberta-base'):
         super(RoBERTaSarcasmDetector, self).__init__()
@@ -39,8 +38,7 @@ class RoBERTaSarcasmDetector(nn.Module):
         cls_output = outputs.pooler_output  # Use [CLS] token representation
         dropout_output = self.dropout(cls_output)
         logits = self.classifier(dropout_output)
-        return torch.sigmoid(logits)  # Shape: (batch_size,)
-
+        return torch.sigmoid(logits)  # Shape: (batch_size, 1)
 
 class HatefulMemeClassifier(nn.Module):
     def __init__(self, clip_encoder, roberta_sarcasm_detector, hidden_size=512):
@@ -53,16 +51,16 @@ class HatefulMemeClassifier(nn.Module):
             param.requires_grad = False
 
         # Access hidden sizes from CLIPConfig's text and vision configurations
-        text_hidden_size = self.clip_encoder.clip.config.text_config.hidden_size  # Typically 512
-        vision_hidden_size = self.clip_encoder.clip.config.vision_config.hidden_size  # Typically 768
+        text_hidden_size = self.clip_encoder.clip.config.text_config.hidden_size
+        vision_hidden_size = self.clip_encoder.clip.config.vision_config.hidden_size
 
         print(f"Text Hidden Size: {text_hidden_size}")
         print(f"Vision Hidden Size: {vision_hidden_size}")
 
         # Define projection layers to map embeddings to a common hidden size
-        self.text_projection = nn.Linear(text_hidden_size, hidden_size)  # Input: 512, Output: hidden_size
-        self.image_projection = nn.Linear(vision_hidden_size, hidden_size)  # Input: 768, Output: hidden_size
-        self.sarcasm_projection = nn.Linear(1, hidden_size)  # Sarcasm scores have shape (batch_size, 1)
+        self.text_projection = nn.Linear(text_hidden_size, hidden_size)
+        self.image_projection = nn.Linear(512, hidden_size)  # **Changed from vision_hidden_size to 512**
+        self.sarcasm_projection = nn.Linear(1, hidden_size)
 
         # Define fusion layers
         self.fusion = nn.Sequential(
@@ -79,17 +77,16 @@ class HatefulMemeClassifier(nn.Module):
         text_embeds, image_embeds = self.clip_encoder(clip_input_ids, clip_attention_mask, pixel_values)  # Each: (batch_size, hidden_size)
 
         print(f"text_embeds shape: {text_embeds.shape}")        # Expected: (batch_size, 512)
-        print(f"image_embeds shape: {image_embeds.shape}")      # Expected: (batch_size, 768)
+        print(f"image_embeds shape: {image_embeds.shape}")      # Expected: (batch_size, 512)
 
         # Encode text for sarcasm detection
-        sarcasm_score = self.roberta_sarcasm_detector(roberta_input_ids, roberta_attention_mask)  # Shape: (batch_size,)
+        sarcasm_score = self.roberta_sarcasm_detector(roberta_input_ids, roberta_attention_mask)  # Shape: (batch_size, 1)
 
         print(f"sarcasm_score shape: {sarcasm_score.shape}")    # Expected: (batch_size, 1)
 
         # Project embeddings to common hidden size
         text_proj = self.text_projection(text_embeds)          # (batch_size, hidden_size)
         image_proj = self.image_projection(image_embeds)       # (batch_size, hidden_size)
-        sarcasm_score = sarcasm_score.unsqueeze(1)  # Shape: (batch_size, 1)
         sarcasm_proj = self.sarcasm_projection(sarcasm_score)  # (batch_size, hidden_size)
 
         # Concatenate all projected features
