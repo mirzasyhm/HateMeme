@@ -160,7 +160,7 @@ def main():
             clip_input_ids = batch['clip_input_ids'].to(device)                       # Correct
             clip_attention_mask = batch['clip_attention_mask'].to(device)             # Correct
             pixel_values = batch['pixel_values'].to(device)
-            labels = batch['label'].to(device)
+            labels = batch['label'].to(device).unsqueeze(1)  # Added unsqueeze here to make it [batch_size, 1]
 
             optimizer_classifier.zero_grad()
             outputs = classifier(

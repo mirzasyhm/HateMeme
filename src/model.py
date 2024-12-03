@@ -35,11 +35,10 @@ class RoBERTaSarcasmDetector(nn.Module):
 
     def forward(self, input_ids, attention_mask):
         outputs = self.roberta(input_ids=input_ids, attention_mask=attention_mask)
-        # Extract the [CLS] token representation
-        cls_output = outputs.last_hidden_state[:, 0, :]  # Shape: (batch_size, hidden_size)
+        cls_output = outputs.last_hidden_state[:, 0, :]  # Use [CLS] token representation
         dropout_output = self.dropout(cls_output)
         logits = self.classifier(dropout_output)        # Shape: (batch_size, 1)
-        return torch.sigmoid(logits)                 # Shape: (batch_size, 1)
+        return torch.sigmoid(logits)                    # Shape: (batch_size, 1)
 
 class HatefulMemeClassifier(nn.Module):
     def __init__(self, clip_encoder, roberta_sarcasm_detector, hidden_size=512):
@@ -95,6 +94,6 @@ class HatefulMemeClassifier(nn.Module):
 
         # Classification
         logits = self.fusion(combined)  # Shape: (batch_size, 1)
-        output = torch.sigmoid(logits).squeeze()  # Shape: (batch_size,)
+        output = torch.sigmoid(logits)  # Shape: (batch_size, 1)
 
-        return output
+        return output  # Shape: (batch_size, 1)
