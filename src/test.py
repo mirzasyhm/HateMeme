@@ -5,10 +5,10 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 
-from src.dataset import HatefulMemesDataset
+from dataset import HatefulMemesDataset
 from transformers import CLIPProcessor, RobertaTokenizer
 
-from src.model import CLIPEncoder, RoBERTaSarcasmDetector, HatefulMemeClassifier  # To be defined in model.py
+from model import CLIPEncoder, RoBERTaSarcasmDetector, HatefulMemeClassifier  # To be defined in model.py
 
 from sklearn.metrics import precision_score, recall_score, f1_score, accuracy_score
 

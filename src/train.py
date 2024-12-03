@@ -9,7 +9,7 @@ from torch.utils.data import DataLoader
 from dataset import HatefulMemesDataset, SarcasmDataset
 from transformers import CLIPProcessor, RobertaTokenizer
 
-from src.model import CLIPEncoder, RoBERTaSarcasmDetector, HatefulMemeClassifier  # To be defined in model.py
+from model import CLIPEncoder, RoBERTaSarcasmDetector, HatefulMemeClassifier  # To be defined in model.py
 
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import precision_score, recall_score, f1_score
