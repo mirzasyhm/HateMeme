@@ -33,7 +33,7 @@ class RoBERTaSarcasmDetector(nn.Module):
         cls_output = outputs.pooler_output  # Use [CLS] token representation
         dropout_output = self.dropout(cls_output)
         logits = self.classifier(dropout_output)
-        return torch.sigmoid(logits).squeeze()  # Shape: (batch_size,)
+        return torch.sigmoid(logits)  # Shape: (batch_size,)
 
 
 class HatefulMemeClassifier(nn.Module):
