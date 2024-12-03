@@ -24,13 +24,13 @@ def main():
     roberta_tokenizer = RobertaTokenizer.from_pretrained('roberta-base')
 
     # Paths to datasets
-    hateful_memes_train_jsonl = os.path.join('datasets', 'train.jsonl')
-    hateful_memes_dev_jsonl = os.path.join('datasets', 'dev.jsonl')
-    hateful_memes_img_dir = os.path.join('datasets', 'img')
+    hateful_memes_train_jsonl = os.path.join('..', 'datasets', 'train.jsonl')
+    hateful_memes_dev_jsonl = os.path.join('..', 'datasets', 'dev.jsonl')
+    hateful_memes_img_dir = os.path.join('..', 'datasets', 'img')
 
-    memotion_labels_csv = os.path.join('datasets', 'labels.csv')
-    memotion_reference_csv = os.path.join('datasets', 'reference.csv')  # If needed
-    memotion_images_dir = os.path.join('datasets', 'images')  # Not used in SarcasmDataset
+    memotion_labels_csv = os.path.join('..', 'datasets', 'labels.csv')
+    memotion_reference_csv = os.path.join('..', 'datasets', 'reference.csv')  # If needed
+    memotion_images_dir = os.path.join('..', 'datasets', 'images')  # Not used in SarcasmDataset
 
     # Load Memotion dataset
     memotion_df = pd.read_csv(memotion_labels_csv)
