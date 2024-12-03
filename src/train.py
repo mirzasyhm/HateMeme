@@ -115,7 +115,7 @@ def main():
             # Corrected Key Access for SarcasmDataset
             input_ids = batch['input_ids'].to(device)                            # Changed
             attention_mask = batch['attention_mask'].to(device)                  # Changed
-            labels = batch['label'].to(device)
+            labels = batch['label'].to(device).unsqueeze(1)
 
             optimizer_sarcasm.zero_grad()
             outputs = sarcasm_detector(input_ids, attention_mask)
