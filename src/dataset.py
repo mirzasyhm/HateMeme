@@ -29,7 +29,7 @@ def process_sarcasm_label(label):
     Assuming 'sarcastic' indicates sarcasm and others do not.
     Adjust this function based on the actual label definitions.
     """
-    if label.lower() == 'sarcastic':
+    if label.lower() in ['twisted meaning', 'very twisted']:
         return 1
     else:
         return 0

@@ -49,7 +49,7 @@ class HatefulMemeClassifier(nn.Module):
         # Access hidden sizes from CLIPConfig's text and vision configurations
         text_hidden_size = self.clip_encoder.clip.config.text_config.hidden_size
         vision_hidden_size = self.clip_encoder.clip.config.vision_config.hidden_size
-        
+
         print(f"Text Hidden Size: {text_hidden_size}")
         print(f"Vision Hidden Size: {vision_hidden_size}")
 
@@ -74,7 +74,7 @@ class HatefulMemeClassifier(nn.Module):
 
         # Encode text for sarcasm detection
         sarcasm_score = self.roberta_sarcasm_detector(roberta_input_ids, roberta_attention_mask)  # Shape: (batch_size,)
-        sarcasm_score = sarcasm_score.unsqueeze(1)  # Shape: (batch_size, 1)
+        sarcasm_score = sarcasm_score.unsqueeze(-1)  # Shape: (batch_size, 1)  # Changed from unsqueeze(1) to unsqueeze(-1)
 
         # Project embeddings to common hidden size
         text_proj = self.text_projection(text_embeds)          # (batch_size, hidden_size)

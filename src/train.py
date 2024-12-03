@@ -28,8 +28,8 @@ def main():
     # Paths to datasets
     hateful_memes_train_jsonl = os.path.join('..', 'datasets', 'train.jsonl')  # Use your correct path
     hateful_memes_dev_jsonl = os.path.join('..', 'datasets', 'dev.jsonl')      # Use your correct path
-    hateful_memes_img_dir = os.path.join('..', 'datasets')                     # Use your correct path
-
+    hateful_memes_img_dir = os.path.join('..', 'datasets')            
+    
     memotion_labels_csv = os.path.join('..', 'datasets', 'labels.csv')
     memotion_reference_csv = os.path.join('..', 'datasets', 'reference.csv')  # If needed
     memotion_images_dir = os.path.join('..', 'datasets', 'images')  # Not used in SarcasmDataset
@@ -112,12 +112,13 @@ def main():
     for epoch in range(epochs_sarcasm):
         total_loss = 0
         for batch in sarcasm_train_loader:
-            roberta_input_ids = batch['roberta_input_ids'].to(device)               # Updated
-            roberta_attention_mask = batch['roberta_attention_mask'].to(device)     # Updated
+            # Corrected Key Access for SarcasmDataset
+            input_ids = batch['input_ids'].to(device)                            # Changed
+            attention_mask = batch['attention_mask'].to(device)                  # Changed
             labels = batch['label'].to(device)
 
             optimizer_sarcasm.zero_grad()
-            outputs = sarcasm_detector(roberta_input_ids, roberta_attention_mask)
+            outputs = sarcasm_detector(input_ids, attention_mask)
             loss = criterion_sarcasm(outputs, labels)
             loss.backward()
             optimizer_sarcasm.step()
@@ -153,10 +154,11 @@ def main():
         classifier.train()
         total_loss = 0
         for batch in hateful_meme_train_loader:
-            roberta_input_ids = batch['roberta_input_ids'].to(device)                 # Updated
-            roberta_attention_mask = batch['roberta_attention_mask'].to(device)       # Updated
-            clip_input_ids = batch['clip_input_ids'].to(device)                       # Updated
-            clip_attention_mask = batch['clip_attention_mask'].to(device)             # Updated
+            # Corrected Key Access for HatefulMemesDataset
+            roberta_input_ids = batch['roberta_input_ids'].to(device)                 # Correct
+            roberta_attention_mask = batch['roberta_attention_mask'].to(device)       # Correct
+            clip_input_ids = batch['clip_input_ids'].to(device)                       # Correct
+            clip_attention_mask = batch['clip_attention_mask'].to(device)             # Correct
             pixel_values = batch['pixel_values'].to(device)
             labels = batch['label'].to(device)
 
@@ -185,10 +187,11 @@ def main():
         all_labels = []
         with torch.no_grad():
             for batch in hateful_meme_dev_loader:
-                roberta_input_ids = batch['roberta_input_ids'].to(device)                 # Updated
-                roberta_attention_mask = batch['roberta_attention_mask'].to(device)       # Updated
-                clip_input_ids = batch['clip_input_ids'].to(device)                       # Updated
-                clip_attention_mask = batch['clip_attention_mask'].to(device)             # Updated
+                # Corrected Key Access for HatefulMemesDataset
+                roberta_input_ids = batch['roberta_input_ids'].to(device)                 # Correct
+                roberta_attention_mask = batch['roberta_attention_mask'].to(device)       # Correct
+                clip_input_ids = batch['clip_input_ids'].to(device)                       # Correct
+                clip_attention_mask = batch['clip_attention_mask'].to(device)             # Correct
                 pixel_values = batch['pixel_values'].to(device)
                 labels = batch['label'].to(device)
 
