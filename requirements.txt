@@ -5,3 +5,4 @@ pillow
 pytesseract
 pandas
 scikit-learn
+kaggle
