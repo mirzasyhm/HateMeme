@@ -110,8 +110,7 @@ class HatefulMemesDataset(Dataset):
         clip_attention_mask = clip_inputs['attention_mask'].squeeze()  # Shape: (77,)
         pixel_values = clip_inputs['pixel_values'].squeeze()          # Shape: (3, H, W)
         
-         # Debug prints to verify sizes
-        print(f"Sample {idx}: clip_input_ids size: {clip_input_ids.size(0)}")  # Should be 77
+    
         
                 # Ensure consistent tensor sizes
         assert roberta_input_ids.size(0) == self.max_length, f"RoBERTa input_ids size mismatch: expected {self.max_length}, got {roberta_input_ids.size(0)}"

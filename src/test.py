@@ -23,7 +23,7 @@ def main():
 
     # Paths to datasets
     hateful_memes_test_jsonl = os.path.join('datasets', 'test.jsonl')
-    hateful_memes_img_dir = os.path.join('datasets', 'img')
+    hateful_memes_img_dir = os.path.join('datasets')
 
     # Create Dataset instance for testing
     hateful_meme_test_dataset = HatefulMemesDataset(
