@@ -113,13 +113,13 @@ def main():
         total_loss = 0
         for batch in sarcasm_train_loader:
             # Corrected Key Access for SarcasmDataset
-            input_ids = batch['input_ids'].to(device)                            # Changed
-            attention_mask = batch['attention_mask'].to(device)                  # Changed
-            labels = batch['label'].to(device).unsqueeze(1)
+            input_ids = batch['input_ids'].to(device)
+            attention_mask = batch['attention_mask'].to(device)
+            labels = batch['label'].to(device).unsqueeze(1)  # Shape: [batch_size, 1]
 
             optimizer_sarcasm.zero_grad()
-            outputs = sarcasm_detector(input_ids, attention_mask)
-            loss = criterion_sarcasm(outputs, labels)
+            outputs = sarcasm_detector(input_ids, attention_mask)  # [batch_size, 1]
+            loss = criterion_sarcasm(outputs, labels)             # Both [batch_size, 1]
             loss.backward()
             optimizer_sarcasm.step()
 
