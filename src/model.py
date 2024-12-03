@@ -77,7 +77,7 @@ class HatefulMemeClassifier(nn.Module):
 
         # Encode text for sarcasm detection
         sarcasm_score = self.roberta_sarcasm_detector(roberta_input_ids, roberta_attention_mask)  # Shape: (batch_size,)
-        #sarcasm_score = sarcasm_score.unsqueeze(-1)  # Shape: (batch_size, 1)  # Changed from unsqueeze(1) to unsqueeze(-1)
+        sarcasm_score = sarcasm_score.unsqueeze(-1)  # Shape: (batch_size, 1)  # Changed from unsqueeze(1) to unsqueeze(-1)
         print(f"sarcasm_score shape: {sarcasm_score.shape}")    # Expected: (batch_size, 1)
 
         # Project embeddings to common hidden size
