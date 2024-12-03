@@ -35,10 +35,11 @@ class RoBERTaSarcasmDetector(nn.Module):
 
     def forward(self, input_ids, attention_mask):
         outputs = self.roberta(input_ids=input_ids, attention_mask=attention_mask)
-        cls_output = outputs.pooler_output  # Use [CLS] token representation
+        # Extract the [CLS] token representation
+        cls_output = outputs.last_hidden_state[:, 0, :]  # Shape: (batch_size, hidden_size)
         dropout_output = self.dropout(cls_output)
-        logits = self.classifier(dropout_output)
-        return torch.sigmoid(logits).squeeze()  # Shape: (batch_size, 1)
+        logits = self.classifier(dropout_output)        # Shape: (batch_size, 1)
+        return torch.sigmoid(logits)                    # Shape: (batch_size, 1)
 
 class HatefulMemeClassifier(nn.Module):
     def __init__(self, clip_encoder, roberta_sarcasm_detector, hidden_size=512):
@@ -59,8 +60,8 @@ class HatefulMemeClassifier(nn.Module):
 
         # Define projection layers to map embeddings to a common hidden size
         self.text_projection = nn.Linear(text_hidden_size, hidden_size)
-        self.image_projection = nn.Linear(512, hidden_size)  # **Changed from vision_hidden_size to 512**
-        self.sarcasm_projection = nn.Linear(1, hidden_size)
+        self.image_projection = nn.Linear(512, hidden_size)  # Changed from vision_hidden_size to 512
+        self.sarcasm_projection = nn.Linear(1, hidden_size)  # Input feature is 1
 
         # Define fusion layers
         self.fusion = nn.Sequential(

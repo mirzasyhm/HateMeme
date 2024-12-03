@@ -138,7 +138,7 @@ def main():
 
     # Load the trained Sarcasm Detector with weights_only=True
     sarcasm_detector = RoBERTaSarcasmDetector().to(device)
-    sarcasm_detector.load_state_dict(torch.load('roberta_sarcasm_detector.pth', weights_only=True))
+    sarcasm_detector.load_state_dict(torch.load('roberta_sarcasm_detector.pth'))  # Removed weights_only=True
     sarcasm_detector.eval()
 
     # Initialize the Hateful Meme Classifier
