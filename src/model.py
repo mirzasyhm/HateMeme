@@ -1,3 +1,4 @@
+# src/model.py
 
 import torch
 import torch.nn as nn
@@ -15,8 +16,8 @@ class CLIPEncoder(nn.Module):
             pixel_values=pixel_values
         )
         # Obtain the text and image embeddings
-        text_embeds = outputs.text_embeds  # Shape: (batch_size, hidden_size)
-        image_embeds = outputs.image_embeds  # Shape: (batch_size, hidden_size)
+        text_embeds = outputs.text_embeds  # Shape: (batch_size, text_hidden_size)
+        image_embeds = outputs.image_embeds  # Shape: (batch_size, vision_hidden_size)
         return text_embeds, image_embeds
 
 
@@ -45,13 +46,24 @@ class HatefulMemeClassifier(nn.Module):
         for param in self.roberta_sarcasm_detector.parameters():
             param.requires_grad = False
 
+        # Access hidden sizes from CLIPConfig
+        text_hidden_size = self.clip_encoder.clip.config.text_config.hidden_size
+        vision_hidden_size = self.clip_encoder.clip.config.vision_config.hidden_size
+
         # Define fusion layers
         # CLIP's text and image embeddings + sarcasm score
-        clip_hidden_size = self.clip_encoder.clip.config.hidden_size  # Typically 512
-        fusion_input_size = (clip_hidden_size * 2) + 1  # Text + Image + Sarcasm score
+        # Assuming you want to concatenate all three: text_embeds, image_embeds, sarcasm_score
+        # Adjust dimensions accordingly
+
+        # Option 1: Project text and image embeddings to a common hidden size
+        self.text_projection = nn.Linear(text_hidden_size, hidden_size)
+        self.image_projection = nn.Linear(vision_hidden_size, hidden_size)
+        self.sarcasm_projection = nn.Linear(1, hidden_size)
 
         self.fusion = nn.Sequential(
-            nn.Linear(fusion_input_size, hidden_size),
+            nn.ReLU(),
+            nn.Dropout(0.3),
+            nn.Linear(hidden_size * 3, hidden_size),
             nn.ReLU(),
             nn.Dropout(0.3),
             nn.Linear(hidden_size, 1)  # Binary classification
@@ -65,8 +77,13 @@ class HatefulMemeClassifier(nn.Module):
         sarcasm_score = self.roberta_sarcasm_detector(input_ids, attention_mask)  # Shape: (batch_size,)
         sarcasm_score = sarcasm_score.unsqueeze(1)  # Shape: (batch_size, 1)
 
-        # Concatenate embeddings and sarcasm score
-        combined = torch.cat((text_embeds, image_embeds, sarcasm_score), dim=1)  # Shape: (batch_size, 2*hidden_size +1)
+        # Project embeddings to common hidden size
+        text_proj = self.text_projection(text_embeds)  # (batch_size, hidden_size)
+        image_proj = self.image_projection(image_embeds)  # (batch_size, hidden_size)
+        sarcasm_proj = self.sarcasm_projection(sarcasm_score)  # (batch_size, hidden_size)
+
+        # Concatenate all projected features
+        combined = torch.cat((text_proj, image_proj, sarcasm_proj), dim=1)  # Shape: (batch_size, hidden_size * 3)
 
         # Classification
         logits = self.fusion(combined)  # Shape: (batch_size, 1)
