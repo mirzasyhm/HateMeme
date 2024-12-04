@@ -59,7 +59,7 @@ class CLIPOnlyClassifier(nn.Module):
         logits = self.fusion(combined)  # [batch_size, 1]
         output = torch.sigmoid(logits)  # [batch_size, 1]
 
-        return output  # [batch_size, 1]
+        return output.view(-1, 1)  # [batch_size, 1]
 
 class RoBERTaSarcasmDetector(nn.Module):
     def __init__(self, pretrained_model='roberta-base'):
