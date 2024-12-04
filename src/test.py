@@ -22,17 +22,18 @@ def main():
     roberta_tokenizer = RobertaTokenizer.from_pretrained('roberta-base')
 
     # Paths to datasets
-    hateful_memes_test_jsonl = os.path.join('..', 'datasets', 'test.jsonl')
-    hateful_memes_img_dir = os.path.join('..', 'datasets')
+    splits_dir = os.path.join('..', 'datasets', 'splits')  # Directory containing split files
+    test_split_jsonl = os.path.join(splits_dir, 'test_split.jsonl')  # Use the new test split
+    hateful_memes_img_dir = os.path.join('..', 'datasets')  # Update if necessary
 
     # Create Dataset instance for testing
     hateful_meme_test_dataset = HatefulMemesDataset(
-        jsonl_file=hateful_memes_test_jsonl,
+        jsonl_file=test_split_jsonl,
         img_dir=hateful_memes_img_dir,
         clip_processor=clip_processor,
         roberta_tokenizer=roberta_tokenizer,
         max_length=128,
-        is_test=True
+        is_test=False  # Set to False since it has labels
     )
 
     # Create DataLoader for testing
@@ -48,25 +49,19 @@ def main():
     clip_encoder.eval()
 
     sarcasm_detector = RoBERTaSarcasmDetector().to(device)
-    sarcasm_detector.load_state_dict(torch.load('roberta_sarcasm_detector.pth', map_location=device))
+    sarcasm_detector.load_state_dict(torch.load('models/roberta_sarcasm_detector.pth', map_location=device))
     sarcasm_detector.eval()
 
     # Initialize the Hateful Meme Classifier
     classifier = HatefulMemeClassifier(clip_encoder, sarcasm_detector).to(device)
-    classifier.load_state_dict(torch.load('hateful_meme_classifier.pth', map_location=device))
+    classifier.load_state_dict(torch.load('models/hateful_meme_classifier.pth', map_location=device))
     classifier.eval()
 
     # Evaluation Metrics
     correct = 0
     total = 0
     all_preds = []
-    all_labels = []  # Not available in test set, typically for unseen data
-
-    # Assuming test set has labels; if not, adjust accordingly.
-    # If test set lacks labels, you can store predictions with image paths for submission
-
-    # For demonstration, let's assume test set has labels (otherwise, remove related parts)
-    # Modify the Dataset class if necessary to include labels or handle missing labels
+    all_labels = []
 
     with torch.no_grad():
         for batch in hateful_meme_test_loader:
@@ -76,6 +71,7 @@ def main():
             clip_input_ids = batch['clip_input_ids'].to(device)
             clip_attention_mask = batch['clip_attention_mask'].to(device)
             pixel_values = batch['pixel_values'].to(device)
+            labels = batch['label'].to(device).unsqueeze(1)  # Shape: [batch_size, 1]
 
             # Pass all inputs to the classifier
             outputs = classifier(
@@ -88,29 +84,19 @@ def main():
 
             preds = (outputs >= 0.5).float()  # Shape: [batch_size, 1]
 
-            # If labels are present
-            if 'label' in batch:
-                labels = batch['label'].to(device).unsqueeze(1)  # Shape: [batch_size, 1]
-                correct += (preds == labels).sum().item()
-                total += labels.size(0)
-                all_preds.extend(preds.cpu().numpy())
-                all_labels.extend(labels.cpu().numpy())
+            correct += (preds == labels).sum().item()
+            total += labels.size(0)
 
-            # If labels are not present (test set), collect predictions with image paths
-            if 'img_path' in batch:
-                img_paths = batch['img_path']
-                for img_path, pred in zip(img_paths, preds):
-                    print(f"Image: {img_path} | Prediction: {'Hateful' if pred.item() == 1 else 'Non-Hateful'}")
+            all_preds.extend(preds.cpu().numpy())
+            all_labels.extend(labels.cpu().numpy())
 
-    if all_labels:  # If labels are available
-        accuracy = correct / total
-        precision = precision_score(all_labels, all_preds)
-        recall = recall_score(all_labels, all_preds)
-        f1 = f1_score(all_labels, all_preds)
-        print(f"Test Set Evaluation | Accuracy: {accuracy:.4f} | Precision: {precision:.4f} | Recall: {recall:.4f} | F1-Score: {f1:.4f}")
+    # Calculate metrics
+    accuracy = correct / total
+    precision = precision_score(all_labels, all_preds, zero_division=0)
+    recall = recall_score(all_labels, all_preds, zero_division=0)
+    f1 = f1_score(all_labels, all_preds, zero_division=0)
 
-    else:
-        print("Test set does not contain labels. Predictions have been printed above.")
+    print(f"Test Set Evaluation | Accuracy: {accuracy:.4f} | Precision: {precision:.4f} | Recall: {recall:.4f} | F1-Score: {f1:.4f}")
 
 if __name__ == "__main__":
     import pandas as pd  # Import here to avoid issues if running dataset.py directly

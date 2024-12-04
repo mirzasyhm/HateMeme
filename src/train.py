@@ -26,10 +26,12 @@ def main():
     roberta_tokenizer = RobertaTokenizer.from_pretrained('roberta-base')
 
     # Paths to datasets
-    hateful_memes_train_jsonl = os.path.join('..', 'datasets', 'train.jsonl')  # Use your correct path
-    hateful_memes_dev_jsonl = os.path.join('..', 'datasets', 'dev.jsonl')      # Use your correct path
-    hateful_memes_img_dir = os.path.join('..', 'datasets')            
-    
+    splits_dir = os.path.join('..', 'datasets', 'splits')  # Directory containing split files
+    train_split_jsonl = os.path.join(splits_dir, 'train_split.jsonl')
+    val_split_jsonl = os.path.join(splits_dir, 'val_split.jsonl')
+    test_split_jsonl = os.path.join(splits_dir, 'test_split.jsonl')  # Optional, if you want to evaluate on a separate test set
+    hateful_memes_img_dir = os.path.join('..', 'datasets')  # Update if necessary
+
     memotion_labels_csv = os.path.join('..', 'datasets', 'labels.csv')
     memotion_reference_csv = os.path.join('..', 'datasets', 'reference.csv')  # If needed
     memotion_images_dir = os.path.join('..', 'datasets', 'images')  # Not used in SarcasmDataset
@@ -42,7 +44,7 @@ def main():
 
     # Create Dataset instances
     hateful_meme_train_dataset = HatefulMemesDataset(
-        jsonl_file=hateful_memes_train_jsonl,
+        jsonl_file=train_split_jsonl,
         img_dir=hateful_memes_img_dir,
         clip_processor=clip_processor,
         roberta_tokenizer=roberta_tokenizer,
@@ -50,13 +52,23 @@ def main():
         is_test=False
     )
 
-    hateful_meme_dev_dataset = HatefulMemesDataset(
-        jsonl_file=hateful_memes_dev_jsonl,
+    hateful_meme_val_dataset = HatefulMemesDataset(
+        jsonl_file=val_split_jsonl,
         img_dir=hateful_memes_img_dir,
         clip_processor=clip_processor,
         roberta_tokenizer=roberta_tokenizer,
         max_length=128,
         is_test=False
+    )
+
+    # Optionally, if you want to evaluate on a separate test set
+    hateful_meme_test_dataset = HatefulMemesDataset(
+        jsonl_file=test_split_jsonl,
+        img_dir=hateful_memes_img_dir,
+        clip_processor=clip_processor,
+        roberta_tokenizer=roberta_tokenizer,
+        max_length=128,
+        is_test=False  # Set to False since it has labels
     )
 
     sarcasm_train_dataset = SarcasmDataset(
@@ -79,8 +91,16 @@ def main():
         num_workers=4
     )
 
-    hateful_meme_dev_loader = DataLoader(
-        hateful_meme_dev_dataset,
+    hateful_meme_val_loader = DataLoader(
+        hateful_meme_val_dataset,
+        batch_size=16,
+        shuffle=False,
+        num_workers=4
+    )
+
+    # Optionally, create a DataLoader for the test set
+    hateful_meme_test_loader = DataLoader(
+        hateful_meme_test_dataset,
         batch_size=16,
         shuffle=False,
         num_workers=4
@@ -136,9 +156,9 @@ def main():
     clip_encoder = CLIPEncoder().to(device)
     clip_encoder.eval()  # Assuming CLIP is pretrained and not fine-tuned here
 
-    # Load the trained Sarcasm Detector with weights_only=True
+    # Load the trained Sarcasm Detector
     sarcasm_detector = RoBERTaSarcasmDetector().to(device)
-    sarcasm_detector.load_state_dict(torch.load('roberta_sarcasm_detector.pth'))  # Removed weights_only=True
+    sarcasm_detector.load_state_dict(torch.load('roberta_sarcasm_detector.pth', map_location=device))
     sarcasm_detector.eval()
 
     # Initialize the Hateful Meme Classifier
@@ -160,7 +180,7 @@ def main():
             clip_input_ids = batch['clip_input_ids'].to(device)                       # Correct
             clip_attention_mask = batch['clip_attention_mask'].to(device)             # Correct
             pixel_values = batch['pixel_values'].to(device)
-            labels = batch['label'].to(device).unsqueeze(1)  # Added unsqueeze here to make it [batch_size, 1]
+            labels = batch['label'].to(device).unsqueeze(1)  # Shape: [batch_size, 1]
 
             optimizer_classifier.zero_grad()
             outputs = classifier(
@@ -186,14 +206,14 @@ def main():
         all_preds = []
         all_labels = []
         with torch.no_grad():
-            for batch in hateful_meme_dev_loader:
+            for batch in hateful_meme_val_loader:
                 # Corrected Key Access for HatefulMemesDataset
                 roberta_input_ids = batch['roberta_input_ids'].to(device)                 # Correct
                 roberta_attention_mask = batch['roberta_attention_mask'].to(device)       # Correct
                 clip_input_ids = batch['clip_input_ids'].to(device)                       # Correct
                 clip_attention_mask = batch['clip_attention_mask'].to(device)             # Correct
                 pixel_values = batch['pixel_values'].to(device)
-                labels = batch['label'].to(device)
+                labels = batch['label'].to(device).unsqueeze(1)  # Shape: [batch_size, 1]
 
                 outputs = classifier(
                     roberta_input_ids,
@@ -210,16 +230,53 @@ def main():
                 all_labels.extend(labels.cpu().numpy())
 
         accuracy = correct / total
-        precision = precision_score(all_labels, all_preds)
-        recall = recall_score(all_labels, all_preds)
-        f1 = f1_score(all_labels, all_preds)
+        precision = precision_score(all_labels, all_preds, zero_division=0)
+        recall = recall_score(all_labels, all_preds, zero_division=0)
+        f1 = f1_score(all_labels, all_preds, zero_division=0)
         print(f"Validation - Epoch {epoch+1}/{epochs_classifier} | Accuracy: {accuracy:.4f} | Precision: {precision:.4f} | Recall: {recall:.4f} | F1-Score: {f1:.4f}")
 
+    # Optionally, evaluate on the separate test set
+    evaluate_on_test_set = True  # Set to False if you don't want to evaluate now
+    if evaluate_on_test_set:
+        classifier.eval()
+        correct = 0
+        total = 0
+        all_preds = []
+        all_labels = []
+        with torch.no_grad():
+            for batch in hateful_meme_test_loader:
+                roberta_input_ids = batch['roberta_input_ids'].to(device)
+                roberta_attention_mask = batch['roberta_attention_mask'].to(device)
+                clip_input_ids = batch['clip_input_ids'].to(device)
+                clip_attention_mask = batch['clip_attention_mask'].to(device)
+                pixel_values = batch['pixel_values'].to(device)
+                labels = batch['label'].to(device).unsqueeze(1)  # Shape: [batch_size, 1]
+
+                outputs = classifier(
+                    roberta_input_ids,
+                    roberta_attention_mask,
+                    clip_input_ids,
+                    clip_attention_mask,
+                    pixel_values
+                )
+                preds = (outputs >= 0.5).float()
+                correct += (preds == labels).sum().item()
+                total += labels.size(0)
+
+                all_preds.extend(preds.cpu().numpy())
+                all_labels.extend(labels.cpu().numpy())
+
+        accuracy = correct / total
+        precision = precision_score(all_labels, all_preds, zero_division=0)
+        recall = recall_score(all_labels, all_preds, zero_division=0)
+        f1 = f1_score(all_labels, all_preds, zero_division=0)
+        print(f"Test Set Evaluation | Accuracy: {accuracy:.4f} | Precision: {precision:.4f} | Recall: {recall:.4f} | F1-Score: {f1:.4f}")
+
     # Save the trained classifier
-    torch.save(classifier.state_dict(), 'hateful_meme_classifier.pth')
-    torch.save(classifier.state_dict(), '/content/drive/My Drive/models/hateful_meme_classifier.pth')  # Ensure this path exists
-    torch.save(sarcasm_detector.state_dict(), '/content/drive/My Drive/models/roberta_sarcasm_detector.pth')  # Ensure this path exists
-    print("Hateful Meme Classifier trained and saved.")
+    os.makedirs('models', exist_ok=True)  # Ensure the models directory exists
+    torch.save(classifier.state_dict(), 'models/hateful_meme_classifier.pth')
+    torch.save(sarcasm_detector.state_dict(), 'models/roberta_sarcasm_detector.pth')
+    print("Hateful Meme Classifier and Sarcasm Detector trained and saved.")
 
 if __name__ == "__main__":
     main()
