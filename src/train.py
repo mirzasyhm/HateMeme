@@ -169,10 +169,10 @@ def main():
     optimizer_classifier = optim.AdamW(filter(lambda p: p.requires_grad, classifier.parameters()), lr=2e-5)
 
     # Training loop for the Hateful Meme Classifier
-    epochs_classifier = 10
+    epochs_classifier = 20
     for epoch in range(epochs_classifier):
         classifier.train()
-        total_loss = 0
+        total_train_loss = 0
         for batch in hateful_meme_train_loader:
             # Corrected Key Access for HatefulMemesDataset
             roberta_input_ids = batch['roberta_input_ids'].to(device)                 # Correct
@@ -194,13 +194,13 @@ def main():
             loss.backward()
             optimizer_classifier.step()
 
-            total_loss += loss.item()
+            total_train_loss += loss.item()
 
-        avg_loss = total_loss / len(hateful_meme_train_loader)
-        print(f"Hateful Meme Classifier - Epoch {epoch+1}/{epochs_classifier} | Train Loss: {avg_loss:.4f}")
+        avg_train_loss = total_train_loss / len(hateful_meme_train_loader)
 
-        # Validation
+       # Validation Phase
         classifier.eval()
+        total_val_loss = 0  # Initialize validation loss
         correct = 0
         total = 0
         all_preds = []
@@ -222,6 +222,10 @@ def main():
                     clip_attention_mask,
                     pixel_values
                 )
+                
+                loss = criterion_classifier(outputs, labels)  # Compute loss
+                total_val_loss += loss.item()  # Accumulate validation loss
+            
                 preds = (outputs >= 0.5).float()
                 correct += (preds == labels).sum().item()
                 total += labels.size(0)
@@ -229,12 +233,19 @@ def main():
                 all_preds.extend(preds.cpu().numpy())
                 all_labels.extend(labels.cpu().numpy())
 
+        avg_val_loss = total_val_loss / len(hateful_meme_val_loader)  # Average validation loss
         accuracy = correct / total
         precision = precision_score(all_labels, all_preds, zero_division=0)
         recall = recall_score(all_labels, all_preds, zero_division=0)
         f1 = f1_score(all_labels, all_preds, zero_division=0)
-        print(f"Validation - Epoch {epoch+1}/{epochs_classifier} | Accuracy: {accuracy:.4f} | Precision: {precision:.4f} | Recall: {recall:.4f} | F1-Score: {f1:.4f}")
-
+        
+        print(f"Epoch {epoch+1}/{epochs_classifier} | "
+            f"Train Loss: {avg_train_loss:.4f} | "
+            f"Val Loss: {avg_val_loss:.4f} | "
+            f"Accuracy: {accuracy:.4f} | "
+            f"Precision: {precision:.4f} | "
+            f"Recall: {recall:.4f} | "
+            f"F1-Score: {f1:.4f}")
     # Save the trained classifier
     os.makedirs('models', exist_ok=True)  # Ensure the models directory exists
     torch.save(classifier.state_dict(), 'models/hateful_meme_classifier.pth')
