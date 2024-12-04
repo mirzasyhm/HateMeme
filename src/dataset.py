@@ -36,13 +36,13 @@ def process_sarcasm_label(label):
 
 
 class HatefulMemesDataset(Dataset):
-    def __init__(self, jsonl_file, img_dir, clip_processor, roberta_tokenizer, max_length=128, is_test=False):
+    def __init__(self, jsonl_file, img_dir, clip_processor, roberta_tokenizer=None, max_length=128, is_test=False):
         """
         Args:
-            jsonl_file (str): Path to the JSONL file (train.jsonl, dev.jsonl, test.jsonl).
+            jsonl_file (str): Path to the JSONL file (train.jsonl, val_split.jsonl, test_split.jsonl).
             img_dir (str): Directory where images are stored.
             clip_processor (CLIPProcessor): Processor for CLIP model.
-            roberta_tokenizer (RobertaTokenizer): Tokenizer for RoBERTa model.
+            roberta_tokenizer (RobertaTokenizer, optional): Tokenizer for RoBERTa model. Defaults to None.
             max_length (int): Maximum token length for RoBERTa.
             is_test (bool): Indicates if the dataset is a test set without labels.
         """
@@ -53,6 +53,7 @@ class HatefulMemesDataset(Dataset):
         self.max_length = max_length
         self.is_test = is_test
         self.clip_processor.tokenizer.model_max_length = 77
+        self.use_roberta = roberta_tokenizer is not None
 
     def __len__(self):
         return len(self.data)
@@ -61,13 +62,12 @@ class HatefulMemesDataset(Dataset):
         """
         Returns:
             A dictionary containing:
-                - roberta_input_ids: Tensor of token ids for RoBERTa.
-                - roberta_attention_mask: Tensor of attention masks for RoBERTa.
                 - clip_input_ids: Tensor of token ids for CLIP.
                 - clip_attention_mask: Tensor of attention masks for CLIP.
                 - pixel_values: Tensor of image data for CLIP.
                 - label: Tensor indicating if the meme is hateful (1) or not (0).
                   (Only if not is_test)
+                - img_path: Path to the image file. (Only if is_test)
         """
         sample = self.data[idx]
         text = sample.get('text', '')
@@ -90,56 +90,64 @@ class HatefulMemesDataset(Dataset):
             max_length=77  # CLIP's max sequence length
         )
 
-        # Prepare inputs for RoBERTa (for sarcasm detection)
-        roberta_encoding = self.roberta_tokenizer.encode_plus(
-            text,
-            add_special_tokens=True,
-            max_length=self.max_length,
-            return_token_type_ids=False,
-            padding='max_length',
-            truncation=True,
-            return_attention_mask=True,
-            return_tensors='pt',
-        )
-
-        roberta_input_ids = roberta_encoding['input_ids'].squeeze()            # Shape: (128,)
-        roberta_attention_mask = roberta_encoding['attention_mask'].squeeze()  # Shape: (128,)
-
         # Extract CLIP inputs
         clip_input_ids = clip_inputs['input_ids'].squeeze()            # Shape: (77,)
         clip_attention_mask = clip_inputs['attention_mask'].squeeze()  # Shape: (77,)
         pixel_values = clip_inputs['pixel_values'].squeeze()          # Shape: (3, H, W)
         
-    
-        
-                # Ensure consistent tensor sizes
-        assert roberta_input_ids.size(0) == self.max_length, f"RoBERTa input_ids size mismatch: expected {self.max_length}, got {roberta_input_ids.size(0)}"
-        assert roberta_attention_mask.size(0) == self.max_length, f"RoBERTa attention_mask size mismatch: expected {self.max_length}, got {roberta_attention_mask.size(0)}"
+        # Ensure consistent tensor sizes
         assert clip_input_ids.size(0) == 77, f"CLIP input_ids size mismatch: expected 77, got {clip_input_ids.size(0)}"
         assert clip_attention_mask.size(0) == 77, f"CLIP attention_mask size mismatch: expected 77, got {clip_attention_mask.size(0)}"
         assert pixel_values.size(0) == 3, f"CLIP pixel_values channel size mismatch: expected 3, got {pixel_values.size(0)}"
         assert pixel_values.size(1) == 224 and pixel_values.size(2) == 224, f"CLIP pixel_values spatial size mismatch: expected (224, 224), got ({pixel_values.size(1)}, {pixel_values.size(2)})"
 
+        if self.use_roberta:
+            # Prepare inputs for RoBERTa (for sarcasm detection)
+            roberta_encoding = self.roberta_tokenizer.encode_plus(
+                text,
+                add_special_tokens=True,
+                max_length=self.max_length,
+                return_token_type_ids=False,
+                padding='max_length',
+                truncation=True,
+                return_attention_mask=True,
+                return_tensors='pt',
+            )
+
+            roberta_input_ids = roberta_encoding['input_ids'].squeeze()            # Shape: (128,)
+            roberta_attention_mask = roberta_encoding['attention_mask'].squeeze()  # Shape: (128,)
+
+            # Ensure consistent tensor sizes
+            assert roberta_input_ids.size(0) == self.max_length, f"RoBERTa input_ids size mismatch: expected {self.max_length}, got {roberta_input_ids.size(0)}"
+            assert roberta_attention_mask.size(0) == self.max_length, f"RoBERTa attention_mask size mismatch: expected {self.max_length}, got {roberta_attention_mask.size(0)}"
 
         if self.is_test:
-            return {
-                'roberta_input_ids': roberta_input_ids,
-                'roberta_attention_mask': roberta_attention_mask,
+            output = {
                 'clip_input_ids': clip_input_ids,
                 'clip_attention_mask': clip_attention_mask,
                 'pixel_values': pixel_values,
                 'img_path': img_path  # Return image path or ID for inference
             }
+            if self.use_roberta:
+                output.update({
+                    'roberta_input_ids': roberta_input_ids,
+                    'roberta_attention_mask': roberta_attention_mask
+                })
+            return output
         else:
             label = sample['label']
-            return {
-                'roberta_input_ids': roberta_input_ids,
-                'roberta_attention_mask': roberta_attention_mask,
+            output = {
                 'clip_input_ids': clip_input_ids,
                 'clip_attention_mask': clip_attention_mask,
                 'pixel_values': pixel_values,
                 'label': torch.tensor(label, dtype=torch.float)
             }
+            if self.use_roberta:
+                output.update({
+                    'roberta_input_ids': roberta_input_ids,
+                    'roberta_attention_mask': roberta_attention_mask
+                })
+            return output
 
 
 class SarcasmDataset(Dataset):

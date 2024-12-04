@@ -6,21 +6,37 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 
 from dataset import HatefulMemesDataset
-from transformers import CLIPProcessor, RobertaTokenizer
+from transformers import CLIPProcessor
 
 from model import CLIPEncoder, CLIPOnlyClassifier  # Import the baseline classifier
 
 from sklearn.metrics import precision_score, recall_score, f1_score, accuracy_score
 
 
+def set_seed(seed=42):
+    """
+    Sets the seed for reproducibility.
+    """
+    import random
+    import numpy as np
+
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
+
+
 def main():
+    # Set seed for reproducibility
+    set_seed(42)
+
     # Device configuration
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f"Using device: {device}")
 
-    # Initialize processors and tokenizers
+    # Initialize processor
     clip_processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
-    roberta_tokenizer = RobertaTokenizer.from_pretrained('roberta-base')  # Not used in baseline
 
     # Paths to datasets
     splits_dir = os.path.join('..', 'datasets', 'splits')  # Directory containing split files
@@ -32,7 +48,7 @@ def main():
         jsonl_file=test_split_jsonl,
         img_dir=hateful_memes_img_dir,
         clip_processor=clip_processor,
-        roberta_tokenizer=roberta_tokenizer,
+        roberta_tokenizer=None,  # Not needed for baseline
         max_length=128,
         is_test=False  # Set to False since it has labels
     )
