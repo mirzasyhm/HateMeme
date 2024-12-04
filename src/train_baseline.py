@@ -93,7 +93,7 @@ def main():
     optimizer_classifier = optim.AdamW(clip_only_classifier.parameters(), lr=2e-5)
 
     # Training loop for the CLIP-Only Classifier
-    epochs_classifier = 10
+    epochs_classifier = 50
     for epoch in range(epochs_classifier):
         clip_only_classifier.train()
         total_loss = 0

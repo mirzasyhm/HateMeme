@@ -23,17 +23,16 @@ class CLIPEncoder(nn.Module):
         return text_embeds, image_embeds
     
 class CLIPOnlyClassifier(nn.Module):
-    def __init__(self, clip_encoder, hidden_size=768):
+    def __init__(self, clip_encoder, hidden_size=512):
         super(CLIPOnlyClassifier, self).__init__()
         self.clip_encoder = clip_encoder
 
         # Access hidden sizes from CLIPConfig's text and vision configurations
         text_hidden_size = self.clip_encoder.clip.config.text_config.hidden_size
-        image_hidden_size = self.clip_encoder.clip.config.vision_config.hidden_size
  
         # Define projection layers to map embeddings to a common hidden size
         self.text_projection = nn.Linear(text_hidden_size, hidden_size)
-        self.image_projection = nn.Linear(image_hidden_size, hidden_size)
+        self.image_projection = nn.Linear(512, hidden_size)
 
         # Define fusion layers
         self.fusion = nn.Sequential(
@@ -78,7 +77,7 @@ class RoBERTaSarcasmDetector(nn.Module):
         return output.view(-1, 1)                       # Ensure shape is [batch_size, 1] 
 
 class HatefulMemeClassifier(nn.Module):
-    def __init__(self, clip_encoder, roberta_sarcasm_detector, hidden_size=768):
+    def __init__(self, clip_encoder, roberta_sarcasm_detector, hidden_size=512):
         super(HatefulMemeClassifier, self).__init__()
         self.clip_encoder = clip_encoder
         self.roberta_sarcasm_detector = roberta_sarcasm_detector
@@ -89,12 +88,11 @@ class HatefulMemeClassifier(nn.Module):
 
         # Access hidden sizes from CLIPConfig's text and vision configurations
         text_hidden_size = self.clip_encoder.clip.config.text_config.hidden_size
-        image_hidden_size = self.clip_encoder.clip.config.vision_config.hidden_size
 
 
         # Define projection layers to map embeddings to a common hidden size
         self.text_projection = nn.Linear(text_hidden_size, hidden_size)
-        self.image_projection = nn.Linear(image_hidden_size, hidden_size)  # Ensure this matches your actual image_embeds
+        self.image_projection = nn.Linear(512, hidden_size)  # Ensure this matches your actual image_embeds
         self.sarcasm_projection = nn.Linear(1, hidden_size)  # Input feature is 1
 
         # Define fusion layers

@@ -169,7 +169,7 @@ def main():
     optimizer_classifier = optim.AdamW(filter(lambda p: p.requires_grad, classifier.parameters()), lr=2e-5)
 
     # Training loop for the Hateful Meme Classifier
-    epochs_classifier = 20
+    epochs_classifier = 50
     for epoch in range(epochs_classifier):
         classifier.train()
         total_train_loss = 0
