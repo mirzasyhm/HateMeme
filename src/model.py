@@ -20,6 +20,46 @@ class CLIPEncoder(nn.Module):
         text_embeds = outputs.text_embeds  # Shape: (batch_size, text_hidden_size)
         image_embeds = outputs.image_embeds  # Shape: (batch_size, vision_hidden_size)
         return text_embeds, image_embeds
+    
+class CLIPOnlyClassifier(nn.Module):
+    def __init__(self, clip_encoder, hidden_size=512):
+        super(CLIPOnlyClassifier, self).__init__()
+        self.clip_encoder = clip_encoder
+
+        # Access hidden sizes from CLIPConfig's text and vision configurations
+        text_hidden_size = self.clip_encoder.clip.config.text_config.hidden_size
+        vision_hidden_size = self.clip_encoder.clip.config.vision_config.hidden_size
+
+        # Define projection layers to map embeddings to a common hidden size
+        self.text_projection = nn.Linear(text_hidden_size, hidden_size)
+        self.image_projection = nn.Linear(vision_hidden_size, hidden_size)
+
+        # Define fusion layers
+        self.fusion = nn.Sequential(
+            nn.ReLU(),
+            nn.Dropout(0.3),
+            nn.Linear(hidden_size * 2, hidden_size),
+            nn.ReLU(),
+            nn.Dropout(0.3),
+            nn.Linear(hidden_size, 1)  # Binary classification
+        )
+
+    def forward(self, clip_input_ids, clip_attention_mask, pixel_values):
+        # Encode text and image with CLIP
+        text_embeds, image_embeds = self.clip_encoder(clip_input_ids, clip_attention_mask, pixel_values)  # Each: [batch_size, hidden_size]
+
+        # Project embeddings to common hidden size
+        text_proj = self.text_projection(text_embeds)    # [batch_size, hidden_size]
+        image_proj = self.image_projection(image_embeds)  # [batch_size, hidden_size]
+
+        # Concatenate all projected features
+        combined = torch.cat((text_proj, image_proj), dim=1)  # [batch_size, hidden_size * 2]
+
+        # Classification
+        logits = self.fusion(combined)  # [batch_size, 1]
+        output = torch.sigmoid(logits)  # [batch_size, 1]
+
+        return output  # [batch_size, 1]
 
 class RoBERTaSarcasmDetector(nn.Module):
     def __init__(self, pretrained_model='roberta-base'):
