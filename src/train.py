@@ -169,7 +169,7 @@ def main():
     optimizer_classifier = optim.AdamW(filter(lambda p: p.requires_grad, classifier.parameters()), lr=2e-5)
 
     # Training loop for the Hateful Meme Classifier
-    epochs_classifier = 3
+    epochs_classifier = 10
     for epoch in range(epochs_classifier):
         classifier.train()
         total_loss = 0
@@ -234,43 +234,6 @@ def main():
         recall = recall_score(all_labels, all_preds, zero_division=0)
         f1 = f1_score(all_labels, all_preds, zero_division=0)
         print(f"Validation - Epoch {epoch+1}/{epochs_classifier} | Accuracy: {accuracy:.4f} | Precision: {precision:.4f} | Recall: {recall:.4f} | F1-Score: {f1:.4f}")
-
-    # Optionally, evaluate on the separate test set
-    evaluate_on_test_set = True  # Set to False if you don't want to evaluate now
-    if evaluate_on_test_set:
-        classifier.eval()
-        correct = 0
-        total = 0
-        all_preds = []
-        all_labels = []
-        with torch.no_grad():
-            for batch in hateful_meme_test_loader:
-                roberta_input_ids = batch['roberta_input_ids'].to(device)
-                roberta_attention_mask = batch['roberta_attention_mask'].to(device)
-                clip_input_ids = batch['clip_input_ids'].to(device)
-                clip_attention_mask = batch['clip_attention_mask'].to(device)
-                pixel_values = batch['pixel_values'].to(device)
-                labels = batch['label'].to(device).unsqueeze(1)  # Shape: [batch_size, 1]
-
-                outputs = classifier(
-                    roberta_input_ids,
-                    roberta_attention_mask,
-                    clip_input_ids,
-                    clip_attention_mask,
-                    pixel_values
-                )
-                preds = (outputs >= 0.5).float()
-                correct += (preds == labels).sum().item()
-                total += labels.size(0)
-
-                all_preds.extend(preds.cpu().numpy())
-                all_labels.extend(labels.cpu().numpy())
-
-        accuracy = correct / total
-        precision = precision_score(all_labels, all_preds, zero_division=0)
-        recall = recall_score(all_labels, all_preds, zero_division=0)
-        f1 = f1_score(all_labels, all_preds, zero_division=0)
-        print(f"Test Set Evaluation | Accuracy: {accuracy:.4f} | Precision: {precision:.4f} | Recall: {recall:.4f} | F1-Score: {f1:.4f}")
 
     # Save the trained classifier
     os.makedirs('models', exist_ok=True)  # Ensure the models directory exists
