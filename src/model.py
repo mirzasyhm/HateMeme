@@ -19,8 +19,7 @@ class CLIPEncoder(nn.Module):
         # Obtain the text and image embeddings
         text_embeds = outputs.text_embeds  # Shape: (batch_size, text_hidden_size)
         image_embeds = outputs.image_embeds  # Shape: (batch_size, vision_hidden_size)
-        print(f"Text Embeddings Shape: {text_embeds.shape}")
-        print(f"Image Embeddings Shape: {image_embeds.shape}")
+        
         return text_embeds, image_embeds
     
 class CLIPOnlyClassifier(nn.Module):
@@ -30,12 +29,10 @@ class CLIPOnlyClassifier(nn.Module):
 
         # Access hidden sizes from CLIPConfig's text and vision configurations
         text_hidden_size = self.clip_encoder.clip.config.text_config.hidden_size
-        vision_hidden_size = self.clip_encoder.clip.config.vision_config.hidden_size
-        print(f"Text Hidden Size: {text_hidden_size}, Vision Hidden Size: {vision_hidden_size}")
-
+ 
         # Define projection layers to map embeddings to a common hidden size
         self.text_projection = nn.Linear(text_hidden_size, hidden_size)
-        self.image_projection = nn.Linear(vision_hidden_size, hidden_size)
+        self.image_projection = nn.Linear(512, hidden_size)
 
         # Define fusion layers
         self.fusion = nn.Sequential(
@@ -50,8 +47,7 @@ class CLIPOnlyClassifier(nn.Module):
     def forward(self, clip_input_ids, clip_attention_mask, pixel_values):
         # Encode text and image with CLIP
         text_embeds, image_embeds = self.clip_encoder(clip_input_ids, clip_attention_mask, pixel_values)  # Each: [batch_size, hidden_size]
-        print(f"Text Embeddings Shape in Classifier: {text_embeds.shape}")
-        print(f"Image Embeddings Shape in Classifier: {image_embeds.shape}")
+
         # Project embeddings to common hidden size
         text_proj = self.text_projection(text_embeds)    # [batch_size, hidden_size]
         image_proj = self.image_projection(image_embeds)  # [batch_size, hidden_size]
